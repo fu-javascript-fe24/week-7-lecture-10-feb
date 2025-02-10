@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./pokemons.js"></script>
+    <script type="module" src="./script.js"></script>
+    <title>MyPokeDB</title>
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <h1 class="header__title">MyPokéDB</h1>
+        <nav class="header__nav">
+          <ul class="header__nav-list">
+            <li class="header__list-item" id="pokedexLink">Pokédex</li>
+            <li class="header__list-item" id="generateLink">Team Generator</li>
+            <li class="header__list-item" id="searchLink">Search Pokemon</li>
+          </ul>
+        </nav>
+      </header>
+
+      <!-- Pokedex Section -->
+      <section class="section" id="pokedex">
+        <h2 class="section__title">Pokédex</h2>
+        <section class="pokedex-section" id="pokedexSection"></section>
+      </section>
+
+      <!-- Generate Pokemon Section -->
+      <section class="section generate-section" id="generate">
+        <h2 class="section__title">Generate Pokemon Team</h2>
+      </section>
+
+      <!-- Search Pokemon Section -->
+      <section class="section search-section" id="search">
+        <h2 class="section__title">Search Pokemon</h2>
+        <form class="pkmn-form" id="searchForm">
+          <input type="text" id="searchInput" />
+          <ul class="autocomplete-list" id="autocompleteList"></ul>
+          <button class="search-btn" id="searchBtn">Search</button>
+        </form>
+      </section>
+    </div>
+  </body>
+</html>
