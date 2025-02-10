@@ -1,8 +1,24 @@
 const log = (msg) => console.log(msg);
 
-pageSetup();
+if(window.location.pathname === '/') {
+    pageSetup();
+} else {
+    singlePageSetup();
+}
 
-function pageSetup() {
+async function singlePageSetup() {
+    log(window.location);
+    let params = new URLSearchParams(window.location.search);
+    let value = params.get('pokemon');
+    log(value);
+    let pokemon = await fetchPokemonDetails(value);
+    const card = createCard(pokemon);
+    card.style.margin = '2rem';
+    document.querySelector('.wrapper').appendChild(card);    
+
+}
+
+async function pageSetup() {
 
     const generateSectionRef = document.querySelector('#generate');
     const searchSectionRef = document.querySelector('#search');
@@ -13,8 +29,74 @@ function pageSetup() {
     for(let ref of listItemRefs) {
         ref.addEventListener('click', displayActiveSection);
     }
+    let pokemons = await fetchPokemons();   
 
-    setupPokedex();
+    setupPokedex(pokemons);
+
+    let allPokemons = await fetchAllPokemons();
+    setupSearchForm(allPokemons);
+}
+
+async function fetchPokemons() {
+    let pokemons = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151&offset=0')
+        .then(response => response.json())
+        .then(data => { return data.results })
+        .catch(error => {
+            console.log(error.message);
+        });
+    return pokemons;
+}
+
+async function fetchAllPokemons() {
+    let pokemons = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1304&offset=0')
+        .then(response => response.json())
+        .then(data => { return data.results })
+        .catch(error => {
+            console.log(error.message);
+        });
+    return pokemons;
+}
+
+async function fetchPokemonDetails(pokemon) {
+    try {
+        let response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`);
+        let data = await response.json();
+        return data;
+    } catch(error) {
+        console.log(error.message);
+    }
+}
+
+function setupSearchForm(pokemons) {
+    const formRef = document.querySelector('#searchForm');
+    const inputRef = document.querySelector('#searchInput');
+
+    inputRef.addEventListener('input', (event) => {
+        updateAutocompleteList(event.target.value.toLowerCase(), pokemons);
+    });
+
+    formRef.addEventListener('submit', (event) => {
+        event.preventDefault();
+        window.location.href = `./single.html?pokemon=${inputRef.value}`;
+    });
+}
+
+function updateAutocompleteList(input, pokemons) {
+    const matchingPokemons = pokemons.filter(p => p.name.includes(input));
+    const listRef = document.querySelector('#autocompleteList');
+    listRef.innerHTML = '';
+    for(let i = 0; i < matchingPokemons.length; i++) {
+        if(i === 10) break;
+        const listItemRef = document.createElement('li');
+        listItemRef.textContent = firstCaseToUpper(matchingPokemons[i].name);
+        listItemRef.addEventListener('click', (event) => {
+            document.querySelector('#searchInput').value = event.target.textContent;
+            listRef.innerHTML = '';
+        });
+
+        listRef.appendChild(listItemRef);
+    }
+
 }
 
 function displayActiveSection(event) {
@@ -39,12 +121,13 @@ function displayActiveSection(event) {
     }
 }
 
-function setupPokedex() {
+async function setupPokedex(pokemons) {
 
     const pokedexSectionRef = document.querySelector('#pokedexSection');
 
     for(let pokemon of pokemons) {
-        let card = createCard(pokemon);
+        let data = await fetchPokemonDetails(pokemon.name);
+        let card = createCard(data);
         pokedexSectionRef.appendChild(card)
     }
 }
@@ -52,97 +135,45 @@ function setupPokedex() {
 function createCard(pokemon) {
     const cardRef = document.createElement('article');
     cardRef.classList.add('card');
-
-    let divRef = document.createElement('div');
-    divRef.classList.add('card__top');
-    divRef.appendChild(createImg(pokemon));
-    divRef.appendChild(createSpan(pokemon));
-    cardRef.appendChild(divRef);
-
-    divRef = document.createElement('div');
-    divRef.classList.add('card__middle');
-    divRef.appendChild(createHeading(pokemon));
-    divRef.appendChild(createSubHeading(pokemon));
-    cardRef.appendChild(divRef);
-
-    divRef = document.createElement('div');
-    divRef.classList.add('card__bottom');
-    for(let stat in pokemon.stats) {
-        divRef.appendChild(createCardStat(stat, pokemon));
-    }
-    cardRef.appendChild(divRef);
+    const cardTemp = `
+        <a href="./single.html?pokemon=${pokemon.name}">
+            <div class="card__top">
+                <img
+                src="${pokemon.sprites.other.dream_world.front_default || pokemon.sprites.front_default}"
+                alt="Picture of ${pokemon.name}"
+                style="background-color: ${getTypeColor(pokemon.types[0].type.name)};"
+                class="card__img"
+                />
+                <span class="card__index">#${pokemon.id}</span>
+            </div>
+            <div class="card__middle">
+                <h3 class="card__pokemon-name">${firstCaseToUpper(pokemon.name)}</h3>
+                <h4>${buildTypeString(pokemon.types)}</h4>
+            </div>
+            <div class="card__bottom">
+                <p class="card__stat">Attack: ${pokemon.stats[1].base_stat}</p>
+                <p class="card__stat">Defense: ${pokemon.stats[2].base_stat}</p>
+                <p class="card__stat">Sp. Attack: ${pokemon.stats[3].base_stat}</p>
+                <p class="card__stat">Sp. Defense: ${pokemon.stats[4].base_stat}</p>
+                <p class="card__stat">HP: ${pokemon.stats[0].base_stat}</p>
+                <p class="card__stat">Speed: ${pokemon.stats[5].base_stat}</p>
+                <p class="card__stat card__stat--span-two">Total: ${getStatsTotal(pokemon.stats)}</p>
+            </div>
+        </a>
+    `;
+    cardRef.innerHTML = cardTemp;
 
     return cardRef;
 }
 
-/*
-<article class="card">
-    <div class="card__top">
-        <img
-        src="https://assets.pokemon.com/assets/cms2/img/pokedex/full/001.png"
-        alt="Picture of Bulbasaur"
-        class="card__img"
-        />
-        <span class="card__index">#1</span>
-    </div>
-    <div class="card__middle">
-        <h3 class="card__pokemon-name">Bulbasaur</h3>
-        <h4>Grass / Poison</h4>
-    </div>
-    <div class="card__bottom">
-        <p class="card__stat">Attack: 49</p>
-        <p class="card__stat">Defense: 49</p>
-        <p class="card__stat">Sp. Attack: 65</p>
-        <p class="card__stat">Sp. Defense: 65</p>
-        <p class="card__stat">HP: 45</p>
-        <p class="card__stat">Speed: 45</p>
-        <p class="card__stat card__stat--span-two">Total: 318</p>
-    </div>
-</article>
-*/
-
-function createImg(pokemon) {
-    const imgRef = document.createElement('img');
-    imgRef.src = pokemon.image;
-    // imgRef.setAttribute('src', pokemon.image);
-    imgRef.alt = `Picture of ${pokemon.name}`;
-    imgRef.classList.add('card__img');
-    imgRef.style.backgroundColor = pokemon.type[0].color;
-    return imgRef;
-}
-
-function createSpan(pokemon) {
-    const spanRef = document.createElement('span');
-    spanRef.textContent = `#${pokemon.id}`;
-    spanRef.classList.add('card__index');
-    return spanRef;
-}
-
-function createHeading(pokemon) {
-    const headRef = document.createElement('h3');
-    headRef.textContent = pokemon.name;
-    headRef.classList.add('card__pokemon-name');
-    return headRef;
-}
-
-function createSubHeading(pokemon) {
-    const headRef = document.createElement('h4');
-    if(pokemon.type.length === 1) {
-        headRef.textContent = pokemon.type[0].name;
+function buildTypeString(types) {
+    let typeString = '';
+    if(types.length === 1) {
+        typeString = firstCaseToUpper(types[0].type.name);
     } else {
-        headRef.textContent = `${pokemon.type[0].name} / ${pokemon.type[1].name}`;
+        typeString = `${firstCaseToUpper(types[0].type.name)} / ${firstCaseToUpper(types[1].type.name)}`;
     }
-    return headRef;
-}
-
-function createCardStat(stat, pokemon) {
-    let pRef = document.createElement('p');
-    pRef.classList.add('card__stat');
-    if(stat === 'total') {
-        pRef.classList.add('card__stat--span-two');
-    }
-    pRef.textContent = `${firstCaseToUpper(stat)}: ${pokemon.stats[stat]}`;
-    return pRef;
+    return typeString;
 }
 
 function firstCaseToUpper(str) {
@@ -181,3 +212,21 @@ function getStatsTotal(stats) {
     }
     return total;
 }
+
+// let divRef = document.createElement('div');
+//     divRef.classList.add('card__top');
+//     divRef.appendChild(createImg(pokemon));
+//     divRef.appendChild(createSpan(pokemon));
+//     cardRef.appendChild(divRef);
+
+//     divRef = document.createElement('div');
+//     divRef.classList.add('card__middle');
+//     divRef.appendChild(createHeading(pokemon));
+//     divRef.appendChild(createSubHeading(pokemon));
+//     cardRef.appendChild(divRef);
+
+//     divRef = document.createElement('div');
+//     divRef.classList.add('card__bottom');
+//     for(let stat in pokemon.stats) {
+//         divRef.appendChild(createCardStat(stat, pokemon));
+//     }
